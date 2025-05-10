@@ -4,12 +4,22 @@ FROM maven:3.8.4-openjdk-17 AS build
 # Set the working directory inside the container
 WORKDIR /app
 
-# Add a volume to store logs
+# Copy the POM file first to leverage Docker cache
+COPY pom.xml .
 
+# Copy the source code
+COPY src ./src
 
-# Copy the JAR file to the container
-ARG JAR_FILE=target/*.jar
-COPY ${JAR_FILE} app.jar
+# Build the application
+RUN mvn clean package -DskipTests
+
+# Create the final runtime image
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Copy the built JAR from the build stage
+COPY --from=build /app/target/*.jar app.jar
 
 # Expose port 8080 (or your configured port)
 EXPOSE 8080
